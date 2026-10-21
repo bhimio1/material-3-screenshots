@@ -10,12 +10,13 @@ use crate::config::Config;
 use crate::record;
 use capture::{CaptureEvent, CaptureOptions};
 use editor::{Editor, EditorEvent};
-use history::{HistoryEvent, HistoryView, Thumbs};
+use history::{HistoryEvent, HistoryView};
 use image::RgbaImage;
 use material_3_ui::common;
 use material_3_ui::icons::icons::*;
 use material_3_ui::sys::{arch, task::Task};
 use material_3_ui::theme::ThemeManager;
+use material_3_ui::thumbs::Thumbnails;
 use material_3_ui::toasts::{Toast, ToastKind, Toasts};
 use material_3_ui::widgets::{self, ButtonKind};
 use settings::SettingsEvent;
@@ -42,7 +43,7 @@ struct App {
     standalone: bool,
     capture: CaptureOptions,
     history: HistoryView,
-    thumbs: Thumbs,
+    thumbs: Thumbnails,
     installed: Task<HashSet<String>>,
     recording: Option<record::State>,
     recording_checked: Instant,
@@ -67,7 +68,7 @@ impl App {
             editor,
             standalone,
             history: HistoryView::default(),
-            thumbs: Thumbs::new(&cc.egui_ctx),
+            thumbs: Thumbnails::new(&cc.egui_ctx, history::load_thumb),
             installed,
             recording: record::current(),
             recording_checked: Instant::now(),

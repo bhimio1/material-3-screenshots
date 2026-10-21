@@ -11,13 +11,12 @@ name = "m3-screenshots"
 path = "src/main.rs"
 
 [dependencies]
-material-3-ui = { git = "https://github.com/bhimio1/material-3-ui", rev = "d1c430aa7feebf86d027f6dce1566b6b9ba4dce0" }
+material-3-ui = { git = "https://github.com/bhimio1/material-3-ui", rev = "5555579277ac2da1e0f1c15c2f2342d9bfd002b9", features = ["notify", "image"] }
 egui = "0.37"
 eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "pnm"] }
 tiny-skia = "0.11"
 ab_glyph = "0.2"
-zbus = { version = "4", default-features = false, features = ["async-io", "blocking"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -1,16 +1,16 @@
 //! The Capture page: start a screenshot or a recording, see the recent ones.
 
-use super::history::{HistoryEvent, HistoryView, Thumbs};
+use super::history::{HistoryEvent, HistoryView};
 use crate::cli::Mode;
 use crate::config::Config;
 use crate::history::Kind;
 use crate::record;
-use crate::ui_ext::{action_tile, thumb_tile};
 use egui::Ui;
 use material_3_ui::common::{self, card, row};
 use material_3_ui::icons::icons::*;
 use material_3_ui::sys::cmd;
-use material_3_ui::widgets::{self, ButtonKind};
+use material_3_ui::thumbs::Thumbnails;
+use material_3_ui::widgets::{self, action_tile, thumb_tile, ButtonKind};
 
 /// The capture page's one-off choices (the defaults come from settings).
 pub struct CaptureOptions {
@@ -61,7 +61,7 @@ pub fn show(
     opts: &mut CaptureOptions,
     recording: Option<&record::State>,
     history: &mut HistoryView,
-    thumbs: &mut Thumbs,
+    thumbs: &mut Thumbnails,
 ) -> Vec<CaptureEvent> {
     let p = widgets::palette(ui);
     let mut events = Vec::new();
@@ -166,7 +166,7 @@ pub fn show(
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = gap;
                     for e in &recent {
-                        let tex = thumbs.get(ui.ctx(), e);
+                        let tex = thumbs.get(&e.path, e.modified);
                         let name = e.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                         let when = chrono::DateTime::<chrono::Local>::from(e.modified).format("%H:%M").to_string();
                         let (icon, badge) = match e.kind {

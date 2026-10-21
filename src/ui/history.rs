@@ -3,17 +3,16 @@
 use crate::config::Config;
 use crate::deliver;
 use crate::history::{self, Entry, Kind};
-use crate::ui_ext::{file_size, thumb_tile};
-use egui::{TextureHandle, Ui};
+use egui::Ui;
 use material_3_ui::common;
+use material_3_ui::format::file_size;
 use material_3_ui::icons::icons::*;
 use material_3_ui::sys::task::Task;
 use material_3_ui::theme::M3Palette;
-use material_3_ui::widgets::{self, ButtonKind};
-use std::collections::{HashMap, HashSet};
+use material_3_ui::thumbs::{self, Thumbnails};
+use material_3_ui::widgets::{self, thumb_tile, ButtonKind};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 const THUMB: u32 = 360;
 
@@ -30,68 +29,20 @@ pub enum HistoryEvent {
     Toast(String, bool),
 }
 
-/// Thumbnails decoded off the UI thread.
-pub struct Thumbs {
-    textures: HashMap<PathBuf, (SystemTime, Option<TextureHandle>)>,
-    requested: HashSet<PathBuf>,
-    tx: mpsc::Sender<(PathBuf, SystemTime)>,
-    rx: mpsc::Receiver<(PathBuf, SystemTime, Option<egui::ColorImage>)>,
-}
-
-impl Thumbs {
-    pub fn new(ctx: &egui::Context) -> Self {
-        let (tx, jobs) = mpsc::channel::<(PathBuf, SystemTime)>();
-        let (done, rx) = mpsc::channel();
-        let ctx = ctx.clone();
-        std::thread::spawn(move || {
-            for (path, mtime) in jobs {
-                let img = load_thumb(&path);
-                if done.send((path, mtime, img)).is_err() {
-                    break;
-                }
-                ctx.request_repaint();
-            }
-        });
-        Self { textures: HashMap::new(), requested: HashSet::new(), tx, rx }
-    }
-
-    pub fn get(&mut self, ctx: &egui::Context, e: &Entry) -> Option<TextureHandle> {
-        for (path, mtime, img) in self.rx.try_iter() {
-            let tex = img.map(|i| ctx.load_texture(path.to_string_lossy(), i, egui::TextureOptions::LINEAR));
-            self.requested.remove(&path);
-            self.textures.insert(path, (mtime, tex));
-        }
-        match self.textures.get(&e.path) {
-            Some((mtime, tex)) if *mtime == e.modified => tex.clone(),
-            _ => {
-                if self.requested.insert(e.path.clone()) {
-                    let _ = self.tx.send((e.path.clone(), e.modified));
-                }
-                None
-            }
-        }
-    }
-
-    pub fn forget(&mut self, path: &Path) {
-        self.textures.remove(path);
-    }
-}
-
-fn load_thumb(path: &Path) -> Option<egui::ColorImage> {
-    let img = match history::kind_of(path)? {
-        Kind::Screenshot => image::open(path).ok()?,
-        // A frame from the video when ffmpegthumbnailer is around.
+/// Decode one thumbnail, for [`Thumbnails`]: the picture itself, or a frame
+/// from a recording when ffmpegthumbnailer is around.
+pub fn load_thumb(path: &Path) -> Option<egui::ColorImage> {
+    match history::kind_of(path)? {
+        Kind::Screenshot => thumbs::load_image(path, THUMB),
         Kind::Recording => {
             let out = std::process::Command::new("ffmpegthumbnailer")
                 .args(["-i", &path.to_string_lossy(), "-o", "-", "-c", "png", "-s", &THUMB.to_string()])
                 .stderr(std::process::Stdio::null())
                 .output()
                 .ok()?;
-            image::load_from_memory(&out.stdout).ok()?
+            thumbs::load_image_bytes(&out.stdout, THUMB)
         }
-    };
-    let t = img.thumbnail(THUMB, THUMB).to_rgba8();
-    Some(egui::ColorImage::from_rgba_unmultiplied([t.width() as usize, t.height() as usize], t.as_raw()))
+    }
 }
 
 pub struct HistoryView {
@@ -128,7 +79,7 @@ impl HistoryView {
         self.last_scan.is_some() && !self.task.running() || !self.entries.is_empty()
     }
 
-    pub fn show(&mut self, ui: &mut Ui, cfg: &Config, thumbs: &mut Thumbs, p: &M3Palette) -> Vec<HistoryEvent> {
+    pub fn show(&mut self, ui: &mut Ui, cfg: &Config, thumbs: &mut Thumbnails, p: &M3Palette) -> Vec<HistoryEvent> {
         let mut events = Vec::new();
         self.refresh(ui.ctx(), cfg, false);
         common::page(ui, ICON_HISTORY, "History", "Your screenshots and recordings, newest first.", |ui| {
@@ -186,7 +137,7 @@ impl HistoryView {
         events
     }
 
-    fn grid(&mut self, ui: &mut Ui, shown: &[Entry], thumbs: &mut Thumbs, events: &mut Vec<HistoryEvent>) {
+    fn grid(&mut self, ui: &mut Ui, shown: &[Entry], thumbs: &mut Thumbnails, events: &mut Vec<HistoryEvent>) {
         let width = ui.available_width();
         let gap = 12.0;
         let cols = ((width + gap) / (210.0 + gap)).floor().max(1.0) as usize;
@@ -195,7 +146,7 @@ impl HistoryView {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = gap;
                 for e in row {
-                    let tex = thumbs.get(ui.ctx(), e);
+                    let tex = thumbs.get(&e.path, e.modified);
                     let name = e.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                     let when = chrono::DateTime::<chrono::Local>::from(e.modified).format("%b %-d, %H:%M");
                     let sub = if e.unsaved { format!("{when} · not saved") } else { format!("{when} · {}", file_size(e.size)) };
@@ -300,7 +251,7 @@ impl HistoryView {
         ui.add_space(10.0);
     }
 
-    fn delete_dialog(&mut self, ctx: &egui::Context, thumbs: &mut Thumbs, p: &M3Palette, events: &mut Vec<HistoryEvent>) {
+    fn delete_dialog(&mut self, ctx: &egui::Context, thumbs: &mut Thumbnails, p: &M3Palette, events: &mut Vec<HistoryEvent>) {
         let Some(path) = self.confirm_delete.clone() else {
             return;
         };

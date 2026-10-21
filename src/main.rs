@@ -12,7 +12,6 @@ mod naming;
 mod notify;
 mod record;
 mod ui;
-mod ui_ext;
 
 use cli::Command;
 use config::Config;

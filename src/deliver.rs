@@ -3,13 +3,12 @@
 
 use crate::cli::ShotArgs;
 use crate::config::{Config, ImageFormat};
-use crate::notify::{Notification, Notifier, Outcome};
+use crate::notify::{self, Notifier, Outcome};
+use material_3_ui::notify::Notification;
 use crate::{capture::Captured, history, naming};
 use image::{ImageEncoder, RgbaImage};
-use material_3_ui::sys::cmd;
-use std::io::Write;
+use material_3_ui::sys::{clipboard, cmd};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::time::Duration;
 
 pub fn encode(img: &RgbaImage, format: ImageFormat, jpeg_quality: u8) -> Result<Vec<u8>, String> {
@@ -65,31 +64,8 @@ pub fn save(img: &RgbaImage, cfg: &Config, mode: &str, label: Option<&str>) -> R
     Ok(path)
 }
 
-/// Put bytes on the Wayland clipboard. wl-copy forks to serve the
-/// clipboard; its output is not captured so the fork can't hold us up.
-pub fn copy_bytes(bytes: &[u8], mime: &str) -> Result<(), String> {
-    if !cmd::exists("wl-copy") {
-        return Err("wl-copy isn't installed (pacman -S wl-clipboard).".into());
-    }
-    let mut child = Command::new("wl-copy")
-        .args(["--type", mime])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| format!("wl-copy: {e}"))?;
-    child
-        .stdin
-        .take()
-        .ok_or("wl-copy: no stdin")?
-        .write_all(bytes)
-        .map_err(|e| format!("wl-copy: {e}"))?;
-    let status = child.wait().map_err(|e| format!("wl-copy: {e}"))?;
-    status.success().then_some(()).ok_or_else(|| "wl-copy failed.".into())
-}
-
 pub fn copy_image(img: &RgbaImage) -> Result<(), String> {
-    copy_bytes(&encode(img, ImageFormat::Png, 0)?, "image/png")
+    clipboard::copy_bytes(&encode(img, ImageFormat::Png, 0)?, "image/png")
 }
 
 const SHUTTER_SOUNDS: &[&str] = &[
@@ -184,7 +160,7 @@ pub fn finish(shot: Captured, args: &ShotArgs, cfg: &Config) -> i32 {
         let text = errors.join("\n");
         eprintln!("m3-screenshots: {text}");
         if cfg.notifications && args.notify {
-            crate::notify::error("Screenshot failed", &text);
+            notify::error("Screenshot failed", &text);
         }
         if !copied && saved.is_none() {
             return 1;
@@ -222,13 +198,9 @@ fn notify_and_wait(file: Option<&Path>, saved: bool, copied: bool, w: u32, h: u3
     actions.push(if saved { ("folder".into(), "Show in folder".into()) } else { ("save".into(), "Save".into()) });
     actions.push(("delete".into(), "Delete".into()));
     let n = Notification {
-        summary: summary.into(),
-        body,
-        icon: "camera-photo".into(),
         image: file.map(Path::to_path_buf),
         actions: if file.is_some() { actions } else { Vec::new() },
-        timeout_ms: 8000,
-        urgency: 1,
+        ..notify::notification(summary, body, "camera-photo")
     };
     let Ok(id) = notifier.send(&n) else {
         return;
@@ -244,16 +216,12 @@ fn notify_and_wait(file: Option<&Path>, saved: bool, copied: bool, w: u32, h: u3
             "edit" => open_editor(file),
             "folder" => open_folder(file.parent().unwrap_or(Path::new("/"))),
             "save" => match image::open(file).map_err(|e| e.to_string()).and_then(|img| save(&img.to_rgba8(), cfg, "region", None)) {
-                Ok(p) => crate::notify::send(&Notification {
-                    summary: "Screenshot saved".into(),
-                    body: p.display().to_string(),
-                    icon: "camera-photo".into(),
-                    image: Some(p),
+                Ok(p) => notify::send(&Notification {
+                    image: Some(p.clone()),
                     timeout_ms: 4000,
-                    urgency: 1,
-                    ..Default::default()
+                    ..notify::notification("Screenshot saved", p.display().to_string(), "camera-photo")
                 }),
-                Err(e) => crate::notify::error("Couldn't save the screenshot", &e),
+                Err(e) => notify::error("Couldn't save the screenshot", &e),
             },
             "delete" => {
                 let _ = std::fs::remove_file(file);
