@@ -13,7 +13,7 @@
 use crate::cli::{Mode, RecordAction};
 use crate::config::{Config, RecordQuality, RecorderBackend};
 use crate::geometry::{self, Rect};
-use crate::notify::{Notification, Notifier, Outcome};
+use crate::notify::{Notifier, Outcome};
 use crate::{capture, deliver, hypr, naming, notify};
 use material_3_ui::sys::cmd;
 use serde::{Deserialize, Serialize};
@@ -416,24 +416,16 @@ fn notify_saved(file: &Path, took: Duration) {
         return;
     };
     let secs = took.as_secs();
-    let n = Notification {
-        summary: "Recording saved".into(),
-        body: format!(
-            "{}  ·  {}:{:02}",
-            file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
-            secs / 60,
-            secs % 60
-        ),
-        icon: "media-record".into(),
-        image: None,
-        actions: vec![
-            ("default".into(), "Play".into()),
-            ("folder".into(), "Show in folder".into()),
-            ("delete".into(), "Delete".into()),
-        ],
-        timeout_ms: 8000,
-        urgency: 1,
-    };
+    let body = format!(
+        "{}  ·  {}:{:02}",
+        file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+        secs / 60,
+        secs % 60
+    );
+    let n = notify::notification("Recording saved", body, "media-record")
+        .action("default", "Play")
+        .action("folder", "Show in folder")
+        .action("delete", "Delete");
     let Ok(id) = notifier.send(&n) else {
         return;
     };

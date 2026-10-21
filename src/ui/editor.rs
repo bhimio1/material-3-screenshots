@@ -4,7 +4,6 @@
 use crate::annotate::{self, Area, Doc, Layer, Shape, P};
 use crate::config::{Config, ImageFormat};
 use crate::deliver;
-use crate::ui_ext::{color_swatch, from_rgba, to_rgba};
 use egui::{pos2, vec2, Color32, CornerRadius, Key, Pos2, Rect, Sense, Stroke, StrokeKind, Ui};
 use image::RgbaImage;
 use material_3_ui::common;
@@ -12,7 +11,7 @@ use material_3_ui::icons::icons::*;
 use material_3_ui::icons::MaterialIcon;
 use material_3_ui::sys::paths;
 use material_3_ui::theme::M3Palette;
-use material_3_ui::widgets::{self, ButtonKind};
+use material_3_ui::widgets::{self, color_swatch, ButtonKind};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -113,7 +112,7 @@ impl Editor {
             redo: Vec::new(),
             clean: Doc::default(),
             tool: Tool::Arrow,
-            color: to_rgba(palette.error),
+            color: palette.error.to_srgba_unmultiplied(),
             width: 4.0,
             filled: false,
             selected: None,
@@ -483,13 +482,13 @@ impl Editor {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
                     for (c, name) in swatches {
-                        if color_swatch(ui, c, to_rgba(c) == self.color, name).clicked() {
-                            self.color = to_rgba(c);
+                        if color_swatch(ui, c, c.to_srgba_unmultiplied() == self.color, name).clicked() {
+                            self.color = c.to_srgba_unmultiplied();
                         }
                     }
-                    let mut custom = from_rgba(self.color);
+                    let mut custom = Color32::from_rgba_unmultiplied(self.color[0], self.color[1], self.color[2], self.color[3]);
                     if ui.color_edit_button_srgba(&mut custom).on_hover_text("Custom color").changed() {
-                        self.color = to_rgba(custom);
+                        self.color = custom.to_srgba_unmultiplied();
                     }
                 });
                 ui.add_space(8.0);
@@ -569,7 +568,7 @@ impl Editor {
                         let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
                         let bg = if selected { p.secondary_container } else { widgets::state_layer(p.surface_container_low, p.on_surface, &resp) };
                         ui.painter().rect_filled(rect, CornerRadius::same(12), bg);
-                        ui.painter().circle_filled(rect.left_center() + vec2(16.0, 0.0), 6.0, from_rgba(layer.color));
+                        ui.painter().circle_filled(rect.left_center() + vec2(16.0, 0.0), 6.0, Color32::from_rgba_unmultiplied(layer.color[0], layer.color[1], layer.color[2], layer.color[3]));
                         let fg = if layer.hidden { p.on_surface_variant.gamma_multiply(0.6) } else { p.on_surface };
                         let g = widgets::truncated_galley(ui, &layer.name(), egui::FontId::proportional(13.0), fg, rect.width() - 110.0);
                         ui.painter().galley(rect.left_center() + vec2(30.0, -g.size().y / 2.0), g, fg);
@@ -843,7 +842,7 @@ impl Editor {
                     .show(ui, |ui| {
                         let te = egui::TextEdit::multiline(&mut edit.text)
                             .font(egui::FontId::proportional(size))
-                            .text_color(from_rgba(self.color))
+                            .text_color(Color32::from_rgba_unmultiplied(self.color[0], self.color[1], self.color[2], self.color[3]))
                             .desired_rows(1)
                             .desired_width(320.0)
                             .frame(egui::Frame::NONE)
@@ -874,7 +873,7 @@ impl Editor {
     }
 
     fn paint_overlays(&self, painter: &egui::Painter, canvas: Rect, img_rect: Rect, p: &M3Palette) {
-        let color = from_rgba(self.color);
+        let color = Color32::from_rgba_unmultiplied(self.color[0], self.color[1], self.color[2], self.color[3]);
         let stroke = Stroke::new((self.width * self.zoom).max(1.0), color);
         match &self.drag {
             Some(Drag::Shape { start, now }) => {

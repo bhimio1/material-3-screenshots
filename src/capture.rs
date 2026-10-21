@@ -15,6 +15,7 @@ use crate::geometry::{self, Monitor, Rect};
 use crate::hypr;
 use image::RgbaImage;
 use material_3_ui::sys::cmd;
+use material_3_ui::theme::SlurpColors;
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -171,9 +172,9 @@ fn slurp(extra: &[&str], boxes: &str, cfg: &Config) -> Result<(Rect, Option<Stri
     if !cmd::exists("slurp") {
         return Err(Error::Failed("slurp isn't installed (pacman -S slurp).".into()));
     }
-    let colors = crate::ui_ext::slurp_colors(&cfg.appearance);
+    let colors = SlurpColors::from_settings(&cfg.appearance);
     let mut args: Vec<&str> = vec!["-d", "-w", "2", "-f", "%x,%y %wx%h %l"];
-    args.extend(["-c", &colors.border, "-b", &colors.background, "-s", &colors.selection, "-B", &colors.boxes]);
+    args.extend(colors.args());
     args.extend(extra);
     let mut child = Command::new("slurp")
         .args(&args)

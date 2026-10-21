@@ -145,12 +145,11 @@ src/
   hypr.rs       hyprctl monitors / clients / activewindow
   deliver.rs    encode, save, clipboard, shutter, the notification and its buttons
   record.rs     recorder command lines, supervisor, state file, status
-  notify.rs     org.freedesktop.Notifications over zbus
+  notify.rs     notification defaults (material-3-ui does the D-Bus)
   naming.rs     file name patterns
   history.rs    what History lists
   annotate.rs   editor document and renderer (tiny-skia, ab_glyph)
   ui/           window: capture, history, settings, editor
-  ui_ext.rs     widgets that may move into material-3-ui
 tests/e2e/      command-line tests against stub tools
 ```
 
