@@ -15,6 +15,9 @@ Usage:
   m3-screenshots record stop              stop the running recording
   m3-screenshots status [--json]          is a recording running?
   m3-screenshots edit FILE                annotate an image
+  m3-screenshots import FILE|- [--edit] [--copy] [--save] [--no-notify]
+                                          treat an image taken elsewhere (or
+                                          PNG on stdin) as a new capture
   m3-screenshots history                  open the history page
   m3-screenshots settings                 open the settings page
 
@@ -102,6 +105,8 @@ pub enum Command {
     Record(RecordAction),
     Status { json: bool },
     Edit(PathBuf),
+    /// An image another tool captured (`None`: stdin), finished like a shot.
+    Import(Option<PathBuf>, ShotArgs),
     Help,
     Version,
     /// Internal: watch a recorder process (see `record.rs`).
@@ -143,6 +148,7 @@ where
             [] => Err("edit needs a file".into()),
             _ => Err("edit takes one file".into()),
         },
+        "import" => parse_import(rest),
         "record" => parse_record(rest),
         "__supervise" => match rest {
             [spec] => Ok(Command::Supervise(spec.clone())),
@@ -198,6 +204,20 @@ fn parse_delay(s: &str) -> Result<u32, String> {
         Ok(n) if n <= 600 => Ok(n),
         _ => Err(format!("--delay wants whole seconds (0–600), not {s:?}")),
     }
+}
+
+fn parse_import(rest: &[String]) -> Result<Command, String> {
+    let Some(file) = rest.first().filter(|f| *f == "-" || !f.starts_with('-')) else {
+        return Err("import needs a file, or - for stdin".into());
+    };
+    let Command::Shot(_, args) = parse_shot(Mode::Region, &rest[1..])? else {
+        unreachable!()
+    };
+    if args.delay != 0 || args.freeze.is_some() {
+        return Err("--delay and --freeze don't apply to import".into());
+    }
+    let file = (file != "-").then(|| PathBuf::from(file));
+    Ok(Command::Import(file, args))
 }
 
 fn parse_record(rest: &[String]) -> Result<Command, String> {
@@ -299,6 +319,16 @@ mod tests {
         assert_eq!(p("status --json"), Ok(Command::Status { json: true }));
         assert_eq!(p("edit /tmp/a.png"), Ok(Command::Edit("/tmp/a.png".into())));
         assert!(p("edit").is_err());
+        let Ok(Command::Import(Some(f), a)) = p("import /tmp/a.png --copy --save") else {
+            panic!()
+        };
+        assert_eq!(f, PathBuf::from("/tmp/a.png"));
+        assert!(a.copy && a.save && !a.edit && a.notify);
+        assert!(matches!(p("import - --edit"), Ok(Command::Import(None, ShotArgs { edit: true, .. }))));
+        assert!(p("import").is_err());
+        assert!(p("import --copy").is_err());
+        assert!(p("import a.png --delay 2").is_err());
+        assert!(p("import a.png --freeze").is_err());
         assert_eq!(p("region --help"), Ok(Command::Help));
         assert_eq!(p("-V"), Ok(Command::Version));
         assert!(p("history now").is_err());

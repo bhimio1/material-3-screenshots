@@ -62,6 +62,28 @@ fn run(cmd: Command) -> i32 {
                 1
             }
         },
+        Command::Import(file, args) => {
+            let cfg = Config::load();
+            let decoded = match &file {
+                Some(path) => image::open(path).map_err(|e| format!("{}: {e}", path.display())),
+                None => {
+                    let mut bytes = Vec::new();
+                    std::io::Read::read_to_end(&mut std::io::stdin(), &mut bytes)
+                        .map_err(|e| e.to_string())
+                        .and_then(|_| image::load_from_memory(&bytes).map_err(|e| format!("stdin: {e}")))
+                }
+            };
+            match decoded {
+                Ok(img) => {
+                    let shot = capture::Captured { image: img.to_rgba8(), mode: cli::Mode::Region, label: None };
+                    deliver::finish(shot, &args, &cfg)
+                }
+                Err(e) => {
+                    eprintln!("m3-screenshots: {e}");
+                    1
+                }
+            }
+        }
         Command::App(page) => ui::run_app(page, Config::load()),
     }
 }

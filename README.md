@@ -76,15 +76,18 @@ m3-screenshots record region|window|output [--audio|--no-audio] [--toggle] [--ac
 m3-screenshots record stop
 m3-screenshots status [--json]
 m3-screenshots edit FILE
+m3-screenshots import FILE|- [--edit] [--copy] [--save] [--no-notify]
 m3-screenshots history | settings
 ```
+
+- **Import:** `import` takes an image another tool captured (a file, or PNG on stdin with `-`) and finishes it like a capture: clipboard, save, notification and history. end4-pC's region selector hands its captures over this way.
 
 - **Defaults:** with neither `--copy` nor `--save`, the settings decide (both, by default). `--edit` on its own opens the editor and leaves saving to you.
 - **Output:** a saved file's path is printed on stdout.
 - **Exit codes:** 0 on success; 1 for a failure or a selection cancelled with Escape (no notification then); 2 for a usage error.
 - **Status:** `status --json` prints `{"recording":false}` or `{"recording":true,"file":…,"mode":…,"backend":…,"audio":…,"started":…,"elapsed":…,"pid":…}`.
 
-Suggested Hyprland bindings (end4-pC sets these up; elsewhere, add them to `~/.config/hypr/custom/keybinds.lua`):
+Suggested Hyprland bindings, for `~/.config/hypr/custom/keybinds.lua` on end-4 setups (the shell's own `Super+Shift+S` region snip already hands its captures to this app):
 
 ```lua
 hl.bind("Print", hl.dsp.exec_cmd("m3-screenshots output --active"))
