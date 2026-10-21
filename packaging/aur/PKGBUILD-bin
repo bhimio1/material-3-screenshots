@@ -1,0 +1,33 @@
+# Maintainer: bhimio1
+# Template: the release workflow fills in @PKGVER@ and @SHA256@ and publishes
+# this to the AUR as material-3-screenshots-bin.
+pkgname=material-3-screenshots-bin
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="Material 3 screenshots, annotation editor and screen recorder for Hyprland"
+arch=('x86_64')
+url="https://github.com/bhimio1/material-3-screenshots"
+license=('MIT')
+depends=('libxkbcommon' 'wayland' 'libglvnd' 'grim' 'slurp' 'wl-clipboard')
+optdepends=(
+  'hyprland: window and output selection (hyprctl)'
+  'hyprpicker: show the frozen screen while selecting'
+  'gpu-screen-recorder: screen recording (preferred)'
+  'wf-recorder: screen recording'
+  'libpulse: recording audio with wf-recorder (pactl)'
+  'pipewire: shutter sound (pw-play)'
+  'sound-theme-freedesktop: the shutter sound'
+  'ffmpegthumbnailer: thumbnails of recordings in History'
+)
+provides=('material-3-screenshots')
+conflicts=('material-3-screenshots' 'material-3-screenshots-git')
+source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/m3-screenshots-x86_64-linux.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+  cd "m3-screenshots-x86_64-linux"
+  install -Dm755 m3-screenshots "$pkgdir/usr/bin/m3-screenshots"
+  install -Dm644 material_3_screenshots.desktop "$pkgdir/usr/share/applications/material_3_screenshots.desktop"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 LICENSE-Inter.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Inter.txt"
+}

@@ -1,0 +1,28 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshots
+GenericName=Screenshot Tool
+Comment=Take screenshots, annotate them and record your screen
+Exec=m3-screenshots
+Icon=applets-screenshooter
+Terminal=false
+Categories=Utility;Graphics;
+Keywords=screenshot;screen capture;annotate;record;screencast;
+StartupWMClass=material_3_screenshots
+Actions=Region;Window;Screen;Record;
+
+[Desktop Action Region]
+Name=Screenshot a region
+Exec=m3-screenshots region
+
+[Desktop Action Window]
+Name=Screenshot a window
+Exec=m3-screenshots window
+
+[Desktop Action Screen]
+Name=Screenshot the focused screen
+Exec=m3-screenshots output --active
+
+[Desktop Action Record]
+Name=Start or stop recording a region
+Exec=m3-screenshots record region --toggle
