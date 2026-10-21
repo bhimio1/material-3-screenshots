@@ -279,6 +279,14 @@ impl eframe::App for App {
                                             Ok(None) => {}
                                             Err(e) => self.toasts.error(e),
                                         },
+                                        CaptureEvent::Install(packages) => {
+                                            let list: Vec<&str> = packages.iter().map(String::as_str).collect();
+                                            let script = arch::install_command(&list, arch::AurHelper::Auto);
+                                            match material_3_ui::sys::term::run(&self.cfg.terminal, &script) {
+                                                Ok(t) => self.toasts.info(format!("Installing in {t}")),
+                                                Err(e) => self.toasts.error(e),
+                                            }
+                                        }
                                         CaptureEvent::OpenHistory => self.page = Page::History,
                                         CaptureEvent::History(h) => self.history_event(h),
                                     }

@@ -39,7 +39,6 @@ fn folder_row(ui: &mut Ui, title: &str, value: &mut String) {
 }
 
 pub fn show(ui: &mut Ui, cfg: &mut Config, theme: &ThemeManager, installed: Option<&HashSet<String>>) -> Vec<SettingsEvent> {
-    let p = widgets::palette(ui);
     let mut events = Vec::new();
     common::page(ui, ICON_SETTINGS, "Settings", "Where captures go and what happens after one.", |ui| {
         card(ui, "Saving", |ui| {
@@ -166,9 +165,12 @@ pub fn show(ui: &mut Ui, cfg: &mut Config, theme: &ThemeManager, installed: Opti
                     }
                 });
             }
+            ui.separator();
+            row(ui, "Terminal", "Where installs run. Empty picks one (kitty, foot, …).", |ui| {
+                ui.add(egui::TextEdit::singleline(&mut cfg.terminal).hint_text("auto").desired_width(200.0));
+            });
             ui.add_space(4.0);
             common::note(ui, &format!("Config: {}", material_3_ui::sys::paths::tilde(&crate::config::path())));
-            let _ = p;
         });
     });
     events

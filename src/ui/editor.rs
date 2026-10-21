@@ -332,7 +332,7 @@ impl Editor {
             .frame(egui::Frame::new().fill(p.surface).inner_margin(egui::Margin::symmetric(16, 6)))
             .show(ui, |ui| self.status_bar(ui, p));
         egui::Panel::right("editor-layers")
-            .default_size(230.0)
+            .default_size(250.0)
             .resizable(false)
             .show_separator_line(false)
             .frame(egui::Frame::new().fill(p.surface).inner_margin(egui::Margin { left: 0, right: 12, top: 0, bottom: 0 }))
@@ -432,8 +432,6 @@ impl Editor {
                         }
                     });
                 });
-            ui.add_space(8.0);
-            self.style_controls(ui, p);
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
@@ -457,35 +455,56 @@ impl Editor {
         });
     }
 
-    fn style_controls(&mut self, ui: &mut Ui, p: &M3Palette) {
-        let swatches: [(Color32, &str); 9] = [
+    fn style_card(&mut self, ui: &mut Ui, p: &M3Palette) {
+        let swatches: [(Color32, &str); 10] = [
             (p.error, "Error (from your theme)"),
             (p.primary, "Primary (from your theme)"),
             (p.tertiary, "Tertiary (from your theme)"),
+            (Color32::from_rgb(0xe5, 0x39, 0x35), "Red"),
             (Color32::from_rgb(0xff, 0xb3, 0x00), "Amber"),
-            (Color32::from_rgb(0x2e, 0x7d, 0x32), "Green"),
-            (Color32::from_rgb(0x15, 0x65, 0xc0), "Blue"),
-            (Color32::from_rgb(0xe9, 0x1e, 0x63), "Pink"),
+            (Color32::from_rgb(0x43, 0xa0, 0x47), "Green"),
+            (Color32::from_rgb(0x1e, 0x88, 0xe5), "Blue"),
+            (Color32::from_rgb(0xd8, 0x1b, 0x60), "Pink"),
             (Color32::WHITE, "White"),
             (Color32::BLACK, "Black"),
         ];
         let before = (self.color, self.width, self.filled);
-        for (c, name) in swatches {
-            if color_swatch(ui, c, to_rgba(c) == self.color, name).clicked() {
-                self.color = to_rgba(c);
-            }
-        }
-        let mut custom = from_rgba(self.color);
-        if ui.color_edit_button_srgba(&mut custom).on_hover_text("Custom color").changed() {
-            self.color = to_rgba(custom);
-        }
-        ui.add_space(8.0);
-        widgets::icon(ui, ICON_LINE_WEIGHT, 20.0, p.on_surface_variant);
-        ui.add(egui::Slider::new(&mut self.width, 1.0..=16.0).step_by(1.0).show_value(false))
-            .on_hover_text("Size: stroke width, text size, blur strength");
-        if widgets::icon_button_sized(ui, ICON_FORMAT_COLOR_FILL, "Fill shapes / label behind text", true, 36.0, self.filled).clicked() {
-            self.filled = !self.filled;
-        }
+        egui::Frame::new()
+            .fill(p.surface_container_low)
+            .corner_radius(CornerRadius::same(20))
+            .inner_margin(egui::Margin::same(12))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal(|ui| {
+                    widgets::icon(ui, ICON_PALETTE, 20.0, p.primary);
+                    ui.label(widgets::title_text("Style", 15.0));
+                });
+                ui.add_space(6.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
+                    for (c, name) in swatches {
+                        if color_swatch(ui, c, to_rgba(c) == self.color, name).clicked() {
+                            self.color = to_rgba(c);
+                        }
+                    }
+                    let mut custom = from_rgba(self.color);
+                    if ui.color_edit_button_srgba(&mut custom).on_hover_text("Custom color").changed() {
+                        self.color = to_rgba(custom);
+                    }
+                });
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    widgets::icon(ui, ICON_LINE_WEIGHT, 20.0, p.on_surface_variant).on_hover_text("Size: stroke width, text size, blur strength");
+                    ui.spacing_mut().slider_width = ui.available_width() - 80.0;
+                    ui.add(egui::Slider::new(&mut self.width, 1.0..=16.0).step_by(1.0).show_value(false));
+                    ui.label(egui::RichText::new(format!("{:.0}", self.width)).color(p.on_surface_variant));
+                });
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    widgets::switch(ui, &mut self.filled);
+                    ui.label(egui::RichText::new("Fill shapes, label text").color(p.on_surface));
+                });
+            });
         if (self.color, self.width, self.filled) != before {
             self.restyle_selected();
         }
@@ -524,6 +543,8 @@ impl Editor {
     }
 
     fn layers_panel(&mut self, ui: &mut Ui, p: &M3Palette) {
+        self.style_card(ui, p);
+        ui.add_space(10.0);
         egui::Frame::new()
             .fill(p.surface_container_low)
             .corner_radius(CornerRadius::same(20))

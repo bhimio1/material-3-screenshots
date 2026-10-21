@@ -30,6 +30,8 @@ pub enum CaptureEvent {
     /// Run the CLI with these arguments, then close the window.
     Spawn(Vec<String>),
     StopRecording,
+    /// Install these packages in a terminal.
+    Install(Vec<String>),
     OpenHistory,
     History(HistoryEvent),
 }
@@ -66,14 +68,18 @@ pub fn show(
     history.refresh(ui.ctx(), cfg, false);
     common::page(ui, ICON_SCREENSHOT_REGION, "Capture", "Take a screenshot or record your screen.", |ui| {
         ui.add_space(8.0);
-        for (program, package, purpose) in [
-            ("grim", "grim", "It takes the screenshots."),
-            ("slurp", "slurp", "It lets you select a region, window or screen."),
-            ("wl-copy", "wl-clipboard", "It copies captures to the clipboard."),
-        ] {
-            if !cmd::exists(program) {
-                common::banner(ui, ICON_WARNING, &format!("{program} ({package}) isn't installed. {purpose} Install it from Settings."), true, |_| {});
-            }
+        let missing: Vec<&str> = [("grim", "grim"), ("slurp", "slurp"), ("wl-copy", "wl-clipboard")]
+            .into_iter()
+            .filter(|(program, _)| !cmd::exists(program))
+            .map(|(_, package)| package)
+            .collect();
+        if !missing.is_empty() {
+            let text = format!("Capturing needs {}, which isn't installed.", missing.join(", "));
+            common::banner(ui, ICON_WARNING, &text, false, |ui| {
+                if widgets::button(ui, ButtonKind::Filled, Some(ICON_DOWNLOAD), "Install").clicked() {
+                    events.push(CaptureEvent::Install(missing.iter().map(|s| s.to_string()).collect()));
+                }
+            });
         }
         if let Some(rec) = recording {
             let secs = (chrono::Local::now().timestamp() - rec.started).max(0);
