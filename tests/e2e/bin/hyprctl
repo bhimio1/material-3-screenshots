@@ -1,0 +1,18 @@
+#!/bin/sh
+echo "hyprctl $*" >> "$STUB_DIR/calls.log"
+case "$2" in
+monitors) cat <<'J'
+[{"id":0,"name":"eDP-1","width":1200,"height":800,"x":0,"y":0,"scale":2.0,"transform":0,"focused":true,
+  "activeWorkspace":{"id":1,"name":"1"},"specialWorkspace":{"id":0,"name":""}},
+ {"id":1,"name":"DP-1","width":800,"height":600,"x":600,"y":0,"scale":1.0,"transform":0,"focused":false,
+  "activeWorkspace":{"id":2,"name":"2"},"specialWorkspace":{"id":0,"name":""}}]
+J
+;;
+clients) cat <<'J'
+[{"address":"0xa","mapped":true,"hidden":false,"at":[10,20],"size":[300,200],"workspace":{"id":1},"class":"kitty","title":"fish","focusHistoryID":1},
+ {"address":"0xb","mapped":true,"hidden":false,"at":[650,30],"size":[400,300],"workspace":{"id":2},"class":"firefox","title":"Docs","focusHistoryID":0},
+ {"address":"0xc","mapped":true,"hidden":false,"at":[0,0],"size":[50,50],"workspace":{"id":9},"class":"hidden-ws","title":"","focusHistoryID":2}]
+J
+;;
+activewindow) echo '{"address":"0xb","mapped":true,"hidden":false,"at":[650,30],"size":[400,300],"workspace":{"id":2},"class":"firefox","title":"Docs"}' ;;
+esac

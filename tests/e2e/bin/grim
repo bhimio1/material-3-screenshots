@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+# Stub grim: writes a PPM whose pixels encode their logical layout position
+# (R = x mod 256, G = y mod 256), so crops can be checked exactly.
+# Layout (matches the hyprctl stub): eDP-1 1200x800 @2x at 0,0 (600x400
+# logical) and DP-1 800x600 @1x at 600,0. grim renders at the highest scale.
+import os, sys
+log = os.path.join(os.environ["STUB_DIR"], "calls.log")
+with open(log, "a") as f:
+    f.write("grim " + " ".join(sys.argv[1:]) + "\n")
+args = sys.argv[1:]
+outs = {"eDP-1": (0, 0, 1200, 800, 2.0), "DP-1": (600, 0, 800, 600, 1.0)}
+scale = 2.0
+if "-g" in args:
+    x, y, wh = args[args.index("-g") + 1].replace(",", " ").split()
+    w, h = wh.split("x")
+    lx, ly, lw, lh = int(x), int(y), int(w), int(h)
+elif "-o" in args:
+    mx, my, pw, ph, scale = outs[args[args.index("-o") + 1]]
+    lx, ly, lw, lh = mx, my, pw / scale, ph / scale
+else:
+    lx, ly, lw, lh = 0, 0, 1400, 600
+W, H = int(lw * scale), int(lh * scale)
+rx = bytes(int(lx + px / scale) % 256 for px in range(W))
+out = bytearray(f"P6\n{W} {H}\n255\n".encode())
+row = bytearray(3 * W)
+row[0::3] = rx
+row[2::3] = b"\x80" * W
+for py in range(H):
+    row[1::3] = bytes([int(ly + py / scale) % 256]) * W
+    out += row
+sys.stdout.buffer.write(out)

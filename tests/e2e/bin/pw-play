@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "pw-play $*" >> "$STUB_DIR/calls.log"

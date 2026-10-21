@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "pactl $*" >> "$STUB_DIR/calls.log"
+[ "$1" = get-default-sink ] && echo alsa_output.test

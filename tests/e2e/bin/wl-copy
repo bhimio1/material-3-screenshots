@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "wl-copy $*" >> "$STUB_DIR/calls.log"
+cat > "$STUB_DIR/clipboard.bin"

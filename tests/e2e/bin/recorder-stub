@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+# Stub gpu-screen-recorder / wf-recorder: writes the output file on SIGINT.
+import os, signal, sys, time
+name = os.path.basename(sys.argv[0])
+args = sys.argv[1:]
+with open(os.path.join(os.environ["STUB_DIR"], "calls.log"), "a") as f:
+    f.write(name + " " + " ".join(args) + "\n")
+out = args[args.index("-o" if name == "gpu-screen-recorder" else "-f") + 1]
+def done(*_):
+    with open(out, "wb") as f:
+        f.write(b"\0\0\0\x18ftypmp42" + b"\0" * 1000)
+    sys.exit(0)
+signal.signal(signal.SIGINT, done)
+while True:
+    time.sleep(0.1)

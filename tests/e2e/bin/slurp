@@ -1,0 +1,6 @@
+#!/bin/sh
+# Stub slurp: records its arguments and stdin, answers $SLURP_ANSWER.
+echo "slurp $*" >> "$STUB_DIR/calls.log"
+cat > "$STUB_DIR/slurp-stdin.txt"
+[ "$SLURP_ANSWER" = cancel ] && { echo "selection cancelled" >&2; exit 1; }
+echo "$SLURP_ANSWER"

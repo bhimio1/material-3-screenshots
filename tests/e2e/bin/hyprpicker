@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "hyprpicker $*" >> "$STUB_DIR/calls.log"
+
+exec sleep 30
