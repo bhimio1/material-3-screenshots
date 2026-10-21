@@ -279,7 +279,7 @@ pub fn contrast(c: [u8; 4]) -> [u8; 4] {
 
 fn to_pixmap(img: &RgbaImage) -> Pixmap {
     let mut pm = Pixmap::new(img.width().max(1), img.height().max(1)).expect("non-zero size");
-    for (dst, src) in pm.data_mut().chunks_exact_mut(4).zip(img.as_raw().chunks_exact(4)) {
+    for (dst, src) in pm.data_mut().as_chunks_mut::<4>().0.iter_mut().zip(img.as_raw().as_chunks::<4>().0) {
         let a = src[3] as u16;
         dst[0] = ((src[0] as u16 * a + 127) / 255) as u8;
         dst[1] = ((src[1] as u16 * a + 127) / 255) as u8;
@@ -291,7 +291,7 @@ fn to_pixmap(img: &RgbaImage) -> Pixmap {
 
 fn from_pixmap(pm: &Pixmap) -> RgbaImage {
     let mut out = Vec::with_capacity(pm.data().len());
-    for px in pm.data().chunks_exact(4) {
+    for px in pm.data().as_chunks::<4>().0 {
         let a = px[3] as u16;
         for c in &px[..3] {
             let v = (*c as u16 * 255 + a / 2).checked_div(a).unwrap_or(0);
